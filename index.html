@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Поиск с подсказками</title>
+  <style>
+    #suggestions {
+      border: 1px solid #ddd;
+      max-width: 300px;
+      display: none;
+    }
+    #suggestions div {
+      padding: 8px;
+      cursor: pointer;
+    }
+    #suggestions div:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Поиск с подсказками</h1>
+  <input type="text" id="search-input" placeholder="Введите адрес..." autocomplete="off">
+  <div id="suggestions"></div>
+
+  <script>
+    // Заглушка с адресами
+    const zg_address = [
+      {
+          index: "1",
+          region: "Нижегородская",
+          regionArea: "",
+          regionVillage: "",
+          city: "Нижний Новгород",
+          cityArea: "Советский район",
+          cityVillage: "",
+          roadSectionName: "улица",
+          streetName: "Богородского",
+          houseNumber: "5",
+          buildingType: "корпус",
+          buildingNumber: "7",
+      },
+      {
+          index: "1",
+          region: "Нижегородская",
+          regionArea: "",
+          regionVillage: "",
+          city: "Нижний Новгород",
+          cityArea: "Советский район",
+          cityVillage: "",
+          roadSectionName: "улица",
+          streetName: "Богородского",
+          houseNumber: "8",
+          buildingType: "корпус",
+          buildingNumber: "2",
+      },
+      {
+          index: "1",
+          region: "Нижегородская",
+          regionArea: "",
+          regionVillage: "",
+          city: "Нижний Новгород",
+          cityArea: "Советский район",
+          cityVillage: "",
+          roadSectionName: "улица",
+          streetName: "Богородского",
+          houseNumber: "",
+          buildingType: "",
+          buildingNumber: "",
+      },
+      {
+          index: "1",
+          region: "Нижегородская",
+          regionArea: "",
+          regionVillage: "",
+          city: "Нижний Новгород",
+          cityArea: "Советский район",
+          cityVillage: "",
+          roadSectionName: "улица",
+          streetName: "Богородского",
+          houseNumber: "2",
+          buildingType: "корпус",
+          buildingNumber: "1",
+      },
+    ];
+
+    const apiToken = 'd8f9b477baa3a78f94987aa90609f5516b475e71';
+
+    document.getElementById('search-input').addEventListener('input', async function() {
+      const query = this.value.trim().toLowerCase();
+      if (query.length > 0) {
+        const localSuggestions = getLocalSuggestions(query);
+        if (localSuggestions.length > 0) {
+          displaySuggestions(localSuggestions);
+        } else {
+          const externalSuggestions = await fetchSuggestionsFromDaData(query);
+          displaySuggestions(externalSuggestions);
+        }
+      } else {
+        clearSuggestions();
+      }
+    });
+
+    function getLocalSuggestions(query) {
+      return zg_address.filter(address => {
+        const fullAddress = `${address.region} ${address.city} ${address.cityArea} ${address.streetName} ${address.houseNumber}`.toLowerCase();
+        return fullAddress.includes(query);
+      }).map(address => {
+        return `${address.region}, ${address.city}, ${address.cityArea}, ${address.streetName} ${address.houseNumber}`.trim();
+      });
+    }
+
+    async function fetchSuggestionsFromDaData(query) {
+      const url = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Token ' + apiToken
+        },
+        body: JSON.stringify({ query })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.suggestions.map(item => item.value);
+      } else {
+        console.error('Ошибка при получении данных от DaData:', response.statusText);
+        return [];
+      }
+    }
+
+    function displaySuggestions(suggestions) {
+      const suggestionsContainer = document.getElementById('suggestions');
+      suggestionsContainer.innerHTML = '';
+      suggestionsContainer.style.display = suggestions.length > 0 ? 'block' : 'none';
+
+      suggestions.forEach(text => {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.textContent = text;
+        suggestionItem.addEventListener('click', function() {
+          document.getElementById('search-input').value = text;
+          clearSuggestions();
+        });
+        suggestionsContainer.appendChild(suggestionItem);
+      });
+    }
+
+    function clearSuggestions() {
+      const suggestionsContainer = document.getElementById('suggestions');
+      suggestionsContainer.innerHTML = '';
+      suggestionsContainer.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
